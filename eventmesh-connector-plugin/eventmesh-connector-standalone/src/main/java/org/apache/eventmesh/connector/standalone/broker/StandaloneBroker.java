@@ -17,6 +17,7 @@
 
 package org.apache.eventmesh.connector.standalone.broker;
 
+import com.google.common.annotations.VisibleForTesting;
 import org.apache.eventmesh.connector.standalone.broker.model.MessageEntity;
 import org.apache.eventmesh.connector.standalone.broker.model.TopicMetadata;
 import org.apache.eventmesh.connector.standalone.broker.task.HistoryMessageClearTask;
@@ -46,6 +47,11 @@ public class StandaloneBroker {
 
     public static StandaloneBroker getInstance() {
         return StandaloneBrokerInstanceHolder.instance;
+    }
+
+    @VisibleForTesting
+    protected static StandaloneBroker newInstance() {
+        return new StandaloneBroker();
     }
 
     /**
