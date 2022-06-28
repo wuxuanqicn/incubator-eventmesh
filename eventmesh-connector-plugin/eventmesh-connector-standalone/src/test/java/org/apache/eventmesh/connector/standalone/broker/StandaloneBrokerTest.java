@@ -17,57 +17,77 @@
 
 package org.apache.eventmesh.connector.standalone.broker;
 
+import io.cloudevents.CloudEvent;
+import io.cloudevents.core.builder.CloudEventBuilder;
 import org.apache.eventmesh.connector.standalone.broker.model.MessageEntity;
+import org.junit.Assert;
+import org.junit.Before;
+import org.junit.Test;
 
 import java.net.URI;
 
-import org.junit.Assert;
-import org.junit.Test;
-
-import io.cloudevents.CloudEvent;
-import io.cloudevents.core.builder.CloudEventBuilder;
-
 public class StandaloneBrokerTest {
 
-    @Test
-    public void getInstance() {
-        Assert.assertNotNull(StandaloneBroker.getInstance());
+    CloudEvent DEFAULT_EVENT = CloudEventBuilder.v1()
+            .withId("test")
+            .withSource(URI.create("testsource"))
+            .withType("testType")
+            .build();
+
+    String DEFAULT_TOPIC = "test-topic";
+
+    StandaloneBroker standaloneBroker;
+
+    @Before
+    public void beforeMethod() {
+        // new instance each method, to make sure share nothing between each method
+        standaloneBroker = StandaloneBroker.newInstance();
     }
 
     @Test
-    public void putMessage() throws InterruptedException {
-        StandaloneBroker instance = StandaloneBroker.getInstance();
-        CloudEvent cloudEvent = CloudEventBuilder.v1()
-                .withId("test")
-                .withSource(URI.create("testsource"))
-                .withType("testType")
-                .build();
-        MessageEntity messageEntity = instance.putMessage("test-topic", cloudEvent);
+    public void testGetInstance() {
+        StandaloneBroker instance1 = StandaloneBroker.getInstance();
+        StandaloneBroker instance2 = StandaloneBroker.getInstance();
+        Assert.assertNotNull(instance1);
+        Assert.assertNotNull(instance2);
+        Assert.assertEquals(instance1, instance2);
+    }
+
+    @Test
+    public void testPutMessage() throws InterruptedException {
+        MessageEntity messageEntity = standaloneBroker.putMessage(DEFAULT_TOPIC, DEFAULT_EVENT);
         Assert.assertNotNull(messageEntity);
     }
 
     @Test
-    public void takeMessage() throws InterruptedException {
-        StandaloneBroker instance = StandaloneBroker.getInstance();
-        CloudEvent cloudEvent = CloudEventBuilder.v1()
-                .withId("test")
-                .withSource(URI.create("testsource"))
-                .withType("testType")
-                .build();
-        instance.putMessage("test-topic", cloudEvent);
-        CloudEvent message = instance.takeMessage("test-topic");
+    public void testTakeMessage() throws InterruptedException {
+        standaloneBroker.putMessage(DEFAULT_TOPIC, DEFAULT_EVENT);
+        CloudEvent message = standaloneBroker.takeMessage(DEFAULT_TOPIC);
         Assert.assertNotNull(message);
     }
 
     @Test
-    public void getMessage() {
+    public void testGetMessage() throws InterruptedException {
+        CloudEvent message = standaloneBroker.getMessage(DEFAULT_TOPIC);
+        Assert.assertNull(message);
+        standaloneBroker.putMessage(DEFAULT_TOPIC, DEFAULT_EVENT);
+        message = standaloneBroker.getMessage(DEFAULT_TOPIC);
+        Assert.assertNotNull(message);
+        Assert.assertEquals(DEFAULT_EVENT, message);
     }
 
     @Test
-    public void testGetMessage() {
+    public void testGetMessageByOffset() throws InterruptedException {
+        MessageEntity messageEntity = standaloneBroker.putMessage(DEFAULT_TOPIC, DEFAULT_EVENT);
+        CloudEvent message = standaloneBroker.getMessage(DEFAULT_TOPIC, messageEntity.getOffset());
+        Assert.assertEquals(message, DEFAULT_EVENT);
     }
 
     @Test
-    public void checkTopicExist() {
+    public void testCheckTopicExist() {
+        Assert.assertFalse(standaloneBroker.checkTopicExist(DEFAULT_TOPIC));
+        standaloneBroker.createTopicIfAbsent(DEFAULT_TOPIC);
+        Assert.assertTrue(standaloneBroker.checkTopicExist(DEFAULT_TOPIC));
     }
+
 }
